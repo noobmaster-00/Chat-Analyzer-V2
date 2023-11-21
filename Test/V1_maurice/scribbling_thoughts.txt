@@ -1,0 +1,24 @@
+import required_libraries  # (like os, pandas, etc.)
+
+Function to navigate directories and fetch chat files:
+    Initialize an empty DataFrame with columns: ['Date', 'Team', 'Person', 'Chats URL', 'Chat Name', 'Chat Group Name', 'File Size', 'Expected Format']
+    for each Date folder in the root directory:
+        for each Team folder in Date:
+            for each Person folder in Team:
+                for each chat file (students.txt) in Person:
+                    Extract required details:
+                        Date = Date from folder name
+                        Team = Team from folder name
+                        Person = Person from folder name
+                        Chats URL = [logic to be defined later]
+                        Chat Name = Name of the chat file
+                        Chat Group Name = [logic to determine this from Chat Name]
+                        File Size = Get size of the chat file
+                        Expected Format = [to be discussed later]
+                    Add extracted details to the DataFrame
+
+    Return the populated DataFrame
+
+Main Program:
+    Call the function to navigate directories and fetch chat files
+    Display the DataFrame or perform any initial analysis (if required)
