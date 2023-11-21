@@ -1,15 +1,18 @@
+PART 1
+
 import required_libraries  # (like os, pandas, etc.)
 
 Function to navigate directories and fetch chat files:
     Initialize an empty DataFrame with columns: ['Date', 'Team', 'Person', 'Chats URL', 'Chat Name', 'Chat Group Name', 'File Size', 'Expected Format']
-    for each Date folder in the root directory:
-        for each Team folder in Date:
-            for each Person folder in Team:
+    
+    for each Date directory given:
+        for each Team subdirectory in Date:
+            for each Person subdirectory in Team:
                 for each chat file (students.txt) in Person:
                     Extract required details:
-                        Date = Date from folder name
-                        Team = Team from folder name
-                        Person = Person from folder name
+                        Date = Date from the Date directory name
+                        Team = Team from the Team subdirectory name
+                        Person = Person from the Person subdirectory name
                         Chats URL = [logic to be defined later]
                         Chat Name = Name of the chat file
                         Chat Group Name = [logic to determine this from Chat Name]
@@ -18,6 +21,37 @@ Function to navigate directories and fetch chat files:
                     Add extracted details to the DataFrame
 
     Return the populated DataFrame
+
+Main Program:
+    Call the function to navigate directories and fetch chat files
+    Display the DataFrame or perform any initial analysis (if required)
+
+
+PART 2
+
+import required_libraries  # (like os, pandas, re, etc.)
+
+Function to parse chat group name and check format:
+    Input: file name (string)
+    Output: chat group name (string), expected format (string)
+
+    Remove "WhatsApp Chat with " prefix from the file name
+    Check if there are any duplicates (like "(1)", "(2)" etc.) in the file name
+    If duplicates exist:
+        Keep the file with the highest duplicate number (max value)
+        Trim the duplicate part from the file name
+    Split the file name into parts (separated by space)
+    Ensure there are exactly two parts:
+        First part: Name or word in code
+        Second part: Combination of letters and numbers
+    If the file name meets these criteria:
+        expected_format = "yes"
+    Else:
+        expected_format = "no"
+    Return chat group name (without the .txt extension) and expected_format
+
+Function to navigate directories and fetch chat data:
+    Similar to previous function, but without 'Chats URL' and with the new logic for chat group name and expected format
 
 Main Program:
     Call the function to navigate directories and fetch chat files
