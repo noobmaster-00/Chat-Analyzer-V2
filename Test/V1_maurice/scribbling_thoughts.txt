@@ -56,3 +56,31 @@ Function to navigate directories and fetch chat data:
 Main Program:
     Call the function to navigate directories and fetch chat files
     Display the DataFrame or perform any initial analysis (if required)
+
+
+PART 3 (actually a revised version for SALES group names)
+
+Function to parse chat group name and check format:
+    Input: file name (string), team name (string)
+    Output: chat group name (string), expected format (string)
+
+    Remove "WhatsApp Chat with " prefix and file extension from the file name
+    Check for duplicates in the file name and remove them
+    Split the file name into parts
+
+    If team name is 'SALES':
+        If there are exactly two parts in the file name:
+            expected_format = 'yes'
+        Else:
+            expected_format = 'no'
+    Else:
+        Check for special characters in the first two parts of the file name
+        If found:
+            expected_format = 'no'
+        Else:
+            expected_format = 'yes'
+
+    Return the chat group name and expected_format
+
+Main Function to navigate directories and fetch chat data:
+    Similar to the previous function, but call the updated parse_chat_group_name function with team name as an additional argument
