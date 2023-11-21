@@ -84,3 +84,46 @@ Function to parse chat group name and check format:
 
 Main Function to navigate directories and fetch chat data:
     Similar to the previous function, but call the updated parse_chat_group_name function with team name as an additional argument
+
+
+PART 4 (final and refined version of table 1 code)
+
+import required_libraries  # (like os, pandas, re, etc.)
+
+Function to parse chat group name and check format:
+    Input: file name (string), team name (string)
+    Output: chat group name (string), expected format (string)
+
+    Remove "WhatsApp Chat with " prefix and file extension from the file name
+    Check for duplicates in the file name and remove them
+    Split the file name into parts
+
+    If team name is 'SALES':
+        Use regex to check:
+            - Pattern for 'EDOOFA' variants (EDOOFA, edoofa, Edoofa, EA) after an underscore
+            - Bracketed date format like (16_11)
+        If any pattern is found:
+            expected_format = 'yes'
+        Else:
+            expected_format = 'no'
+    Else:
+        Check for special characters in the first two parts of the file name
+        If found:
+            expected_format = 'no'
+        Else:
+            expected_format = 'yes'
+
+    Return the chat group name and expected_format
+
+Function to navigate directories and fetch chat data:
+    Initialize an empty DataFrame
+    Walk through the directory structure (Date/Team/Person)
+    For each chat file:
+        Parse the chat group name and determine the expected format
+        Populate the DataFrame with chat details
+
+Main Program:
+    Call the function to navigate directories and fetch chat files
+    Split the DataFrame based on 'Expected Format' into 'df_king' and 'df_joker'
+    'df_king' contains rows with expected_format = 'yes'
+    'df_joker' contains rows with expected_format = 'no'
