@@ -1,3 +1,4 @@
+Day 1 - Process the chats and check for duplicates
 PART 1
 
 import required_libraries  # (like os, pandas, etc.)
@@ -127,3 +128,7 @@ Main Program:
     Split the DataFrame based on 'Expected Format' into 'df_king' and 'df_joker'
     'df_king' contains rows with expected_format = 'yes'
     'df_joker' contains rows with expected_format = 'no'
+
+
+Day2- Generating tables for the spike graphs
+
