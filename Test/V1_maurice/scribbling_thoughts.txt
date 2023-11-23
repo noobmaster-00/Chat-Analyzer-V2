@@ -130,5 +130,66 @@ Main Program:
     'df_joker' contains rows with expected_format = 'no'
 
 
-Day2- Generating tables for the spike graphs
+Day2- Parsing and identifying person or not
 
+# Additional libraries might be needed, like datetime
+
+Function to process chat files for a person and date:
+    Input: Directory path (string), person's name (string), date (string)
+    Output: DataFrame for the person and date
+
+    Initialize a DataFrame for the person and date with 288 columns (5-min intervals)
+    Read each chat file in the person's directory for the given date
+    For each message in the chat file:
+        Identify if the sender is the counselor or the student
+        Find the corresponding 5-minute interval
+        Update the DataFrame (1 for message, 0 otherwise)
+
+    Return the populated DataFrame
+
+Main Program:
+    After executing Part 1:
+    Initialize a dictionary to store DataFrames
+    For each person and each date:
+        Call the chat processing function
+        Store the resulting DataFrame in the dictionary with a key 'person_date'
+
+# Note: Actual implementation will depend on the structure of the directories and chat files
+
+
+Day 3- generating tables in csvs for all chats parsed with actual data of 22/11/23
+
+1. Define the function list_chat_files:
+   - Takes a directory path as input.
+   - Traverses the directory structure (Date/Team/Person).
+   - Lists all '.txt' files within these directories.
+   
+2. Define the function parse_chat_file:
+   - Takes a file path and expected date as input.
+   - Reads the chat file line by line.
+   - Uses regex to extract date, time, sender, and message from each line.
+   - Converts date and time to a datetime object.
+   - Checks if the sender's name is not purely numeric.
+   - Returns a list of tuples (datetime, sender, is_person flag).
+
+3. Define the function create_template_dataframe:
+   - Creates a DataFrame with 1440 rows, each for a minute of the day.
+   - Returns the DataFrame.
+
+4. Define the function populate_dataframe:
+   - Takes a DataFrame, parsed chat data, and a starting column index as input.
+   - For each entry in the parsed data, calculates the corresponding minute of the day.
+   - Updates the DataFrame, marking '1' in columns based on 'person' or 'others'.
+   - Returns the updated column index.
+
+5. Define the function process_person_chats:
+   - Takes a list of chat files as input.
+   - For each file, determines the corresponding DataFrame key (date_person).
+   - Parses the chat file and populates the DataFrame.
+   - Returns a dictionary of DataFrames keyed by date_person.
+
+6. Main script execution:
+   - Sets the root directory for chat files.
+   - Calls list_chat_files to get a list of chat files.
+   - Processes each chat file and generates DataFrames.
+   - Saves each DataFrame as a CSV file in a specified directory.
