@@ -1,0 +1,79 @@
+import os
+import re
+from datetime import datetime, timedelta
+import logging
+import json
+
+# Initialize logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def read_settings():
+    try:
+        with open('settings.json', 'r') as file:
+            return json.load(file)
+    except Exception as e:
+        logging.error(f"Error reading settings: {e}")
+        return {}
+
+def normalize_chat_file_name(chat_file):
+    # Remove suffixes like (1), (2), etc. from file names
+    return re.sub(r' ?\(\d+\)\.txt$', '.txt', chat_file)
+
+def is_duplicate_file(folder_path, normalized_file_name):
+    for existing_file in os.listdir(folder_path):
+        if normalize_chat_file_name(existing_file) == normalized_file_name:
+            return True
+    return False
+
+def save_chat(chat, sender_name, chat_file):
+    folder_name = sender_name.replace(" ", "_")
+    folder_path = f'filtered_chats/{folder_name}'
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        logging.info(f"Created folder: {folder_path}")
+
+    normalized_file_name = normalize_chat_file_name(chat_file)
+    if is_duplicate_file(folder_path, normalized_file_name):
+        logging.info(f"Skipping duplicate chat file {chat_file} for {sender_name}")
+        return
+
+    file_path = f'{folder_path}/{chat_file}'
+    with open(file_path, 'w', encoding='utf-8-sig') as file:
+        file.writelines(chat)
+    logging.info(f"Saved filtered chat to {file_path}")
+
+def main():
+    settings = read_settings()
+    name_list = set(settings.get('name_list', []))  # Use a set for efficient lookup
+    chat_file_path = settings.get('chat_file_path', 'C:\\whatsapp_chat_analyzer\\')
+
+    if not os.path.exists('filtered_chats'):
+        os.makedirs('filtered_chats')
+        logging.info("Created 'filtered_chats' directory")
+
+    chat_files = os.listdir(chat_file_path)
+    logging.info(f"Found {len(chat_files)} files in the directory")
+
+    for chat_file in chat_files:
+        if not chat_file.endswith('.txt'):
+            logging.info(f"Skipping {chat_file} as it's not a .txt file")
+            continue
+
+        logging.info(f"Processing {chat_file}")
+        with open(f'{chat_file_path}{chat_file}', 'r', encoding='utf-8-sig') as file:
+            chat = file.readlines()
+
+        # Reverse search for a sender in name_list
+        for line in reversed(chat):
+            match = re.search(r'(\d{2}/\d{2}/\d{2}), \d{1,2}:\d{2}\u202f[ap]m - (.*?): ', line)
+            if match:
+                _, sender = match.groups()
+                if sender in name_list:
+                    save_chat(chat, sender, chat_file)
+                    break  # Stop searching after the first match
+
+
+    logging.info("Done filtering chats.")
+
+if __name__ == "__main__":
+    main()
