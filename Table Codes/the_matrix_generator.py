@@ -39,14 +39,18 @@ def parse_chat_file(file_path, expected_date):
             if date_time.date() != expected_date:
                 continue
 
-            # Check if sender's name is not purely numeric
-            is_person = not sender.isnumeric() if sender else False
+            # Adjusted logic to check for numeric sender (phone number)
+            is_person = re.match(r'^[+\d\s-]+$', sender) is None  # True if sender is NOT purely numeric
+
+            # Debug: Print sender and is_person flag
+            print(f"Sender: {sender}, Is Person: {is_person}")
+
             chat_data.append((date_time, sender, is_person))
     return chat_data
 
 # Function to create a template dataframe
 def create_template_dataframe():
-    times = [datetime.datetime(2000, 1, 1, 0, 0) + datetime.timedelta(minutes=5 * i) for i in range(280)]
+    times = [datetime.datetime(2000, 1, 1, 0, 0) + datetime.timedelta(minutes=1 * i) for i in range(1440)]
     intervals = [time.strftime('%I:%M %p') for time in times]
     df = pd.DataFrame(index=intervals)
     return df
@@ -56,7 +60,7 @@ def populate_dataframe(df, parsed_data, start_column_index):
     person_column_index = start_column_index
     for entry in parsed_data:
         date_time, sender, is_person = entry
-        interval_index = min((date_time.hour * 60 + date_time.minute) // 5, 279)
+        interval_index = min((date_time.hour * 60 + date_time.minute) // 1, 1439)
         interval = df.index[interval_index]
 
         if person_column_index not in df.columns:
@@ -108,7 +112,7 @@ date_directory = "C:\\Users\\mauriceyeng\\Python\\Daily-Reports\\Test\\filtered_
 chat_files = list_chat_files(date_directory)
 person_dataframes = process_person_chats(chat_files)
 
-# Save each dataframe as a CSV file in the current working directory for testing purpose only, will be omiited in real application
+# Save each dataframe as a CSV file in the current working directory for testing purpose only, will be omitted in real application
 
 for key, df in person_dataframes.items():
     csv_file_path = f"csvs/{key}.csv"
