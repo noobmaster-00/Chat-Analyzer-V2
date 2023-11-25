@@ -216,9 +216,9 @@ def calculate_delays(messages, person_name):
 def check_ongoing_chats(date, person_name, time_of_delay):
     # Check and return ongoing chat details during the delay
 
-# Function to extract last 7 messages
-def extract_last_7_messages(messages, time_of_delay):
-    # Extract and return the last 7 messages before the delay
+# Function to extract last 7 messages (regardless of date)
+def extract_last_7_messages(messages):
+    # Extract and return the last 7 messages from the chat history
 
 # Main analysis process
 def main_analysis(root_directory):
@@ -235,7 +235,7 @@ def main_analysis(root_directory):
 
                 for delay in delays:
                     ongoing_chats = check_ongoing_chats(date_folder, person_folder, delay)
-                    last_7_messages = extract_last_7_messages(messages, delay)
+                    last_7_messages = extract_last_7_messages(messages)
                     # Populate the analysis table
                     analysis_table.append([date_folder, team_folder, person_folder, delay, ongoing_chats, last_7_messages])
 
