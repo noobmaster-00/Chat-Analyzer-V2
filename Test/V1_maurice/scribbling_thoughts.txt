@@ -193,3 +193,53 @@ Day 3- generating tables in csvs for all chats parsed with actual data of 22/11/
    - Calls list_chat_files to get a list of chat files.
    - Processes each chat file and generates DataFrames.
    - Saves each DataFrame as a CSV file in a specified directory.
+
+
+
+TABLE 3
+
+# Define the delay threshold
+DELAY_THRESHOLD = 15  # minutes
+
+# Define counselor names for each team
+counselor_names = {'team1': ['name1', 'name2'], 'team2': ['name3', 'name4']}
+
+# Function to read chat files
+def read_chat_file(file_path):
+    # Read and return the list of messages with timestamps and sender
+
+# Function to calculate delays
+def calculate_delays(messages, person_name):
+    # Calculate and return times of significant delays
+
+# Function to check ongoing chats
+def check_ongoing_chats(date, person_name, time_of_delay):
+    # Check and return ongoing chat details during the delay
+
+# Function to extract last 7 messages
+def extract_last_7_messages(messages, time_of_delay):
+    # Extract and return the last 7 messages before the delay
+
+# Main analysis process
+def main_analysis(root_directory):
+    analysis_table = []  # Initialize the analysis table
+
+    # Navigate through the folder structure
+    for date_folder in os.listdir(root_directory):
+        for team_folder in os.listdir(os.path.join(root_directory, date_folder)):
+            for person_folder in os.listdir(os.path.join(root_directory, date_folder, team_folder)):
+                # Process each chat file
+                chat_file_path = os.path.join(root_directory, date_folder, team_folder, person_folder)
+                messages = read_chat_file(chat_file_path)
+                delays = calculate_delays(messages, person_folder)
+
+                for delay in delays:
+                    ongoing_chats = check_ongoing_chats(date_folder, person_folder, delay)
+                    last_7_messages = extract_last_7_messages(messages, delay)
+                    # Populate the analysis table
+                    analysis_table.append([date_folder, team_folder, person_folder, delay, ongoing_chats, last_7_messages])
+
+    return analysis_table
+
+# Example usage
+analysis_table = main_analysis('path_to_root_directory')
