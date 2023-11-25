@@ -243,3 +243,35 @@ def main_analysis(root_directory):
 
 # Example usage
 analysis_table = main_analysis('path_to_root_directory')
+
+
+Table 3- V2 
+# Define the delay threshold and other constants
+DELAY_THRESHOLD = 15  # minutes
+LAST_DAYS = 7  # number of days to filter
+
+# Function to filter messages from the last 7 days
+def filter_last_7_days_messages(file_path):
+    # ...
+
+# Function to parse messages
+def parse_messages(messages):
+    # ...
+
+# Function to identify the person and calculate delays
+def calculate_delays_and_identify_person(messages):
+    # ...
+
+# Main analysis process
+def main_analysis(root_directory):
+    # ...
+    for date_folder, team_folder, person_folder in all_folders:
+        chat_file_path = os.path.join(date_folder, team_folder, person_folder)
+        messages = filter_last_7_days_messages(chat_file_path)
+        parsed_messages = parse_messages(messages)
+        delays = calculate_delays_and_identify_person(parsed_messages)
+        # ...
+    # ...
+
+# Run the analysis
+delay_analysis_table = main_analysis(root_directory)
