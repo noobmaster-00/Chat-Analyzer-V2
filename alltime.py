@@ -28,13 +28,37 @@ def calculate_time_spent_student(chat_df, target_date, employee_name):
     total_chars = student_messages['message'].str.len().sum()
     time_spent_seconds = (total_chars / 10) * 5
     return strfdelta(timedelta(seconds=time_spent_seconds))
+
     
     
-def is_broken_chat_student(chat_df, employee_name, report_date):
-    messages_on_date = chat_df[chat_df['date'].dt.date == report_date]
-    if not messages_on_date.empty and messages_on_date.iloc[-1]['sender'] != employee_name:
+def is_broken_chat_student(chat_df, employee_name, target_date):
+    # Adjust for the previous day
+    previous_day = target_date - timedelta(days=1)
+
+    # Filter messages for the previous day
+    daily_messages = chat_df[chat_df['date'].dt.date == previous_day]
+
+    # Check if both the employee and the student had at least one text on that day
+    if daily_messages.empty:
+        return 'No'  # No conversation happened on this day
+
+    employee_messages = daily_messages[daily_messages['sender'] == employee_name]
+    student_messages = daily_messages[daily_messages['sender'] != employee_name]
+
+    # Check if both parties have sent at least one message
+    if employee_messages.empty or student_messages.empty:
+        return 'No'  # One of the parties did not send any message
+
+    # Check the sender of the last message of the day
+    last_message_sender = daily_messages.iloc[-1]['sender']
+
+    # If the last message is from the employee, it's a broken chat by the student
+    if last_message_sender == employee_name:
         return 'Yes'
-    return 'No'    
+
+    return 'No'
+
+   
     
     
     
@@ -51,14 +75,27 @@ def count_missed_replies_student(chat_df, employee_name, report_date):
 
 
 
-def check_missed_reply_student(chat_df, employee_name, report_date):
-    messages_on_date = chat_df[chat_df['date'].dt.date == report_date]
-    employee_messages = messages_on_date[messages_on_date['sender'] == employee_name]
-    student_messages = messages_on_date[messages_on_date['sender'] != employee_name]
+def count_missed_replies_studentt(chat_df, employee_name, target_date):
+    previous_day = target_date - timedelta(days=1)
+    print(f"Checking for missed replies on: {previous_day}")
+
+    daily_messages = chat_df[chat_df['date'].dt.date == previous_day]
     
+    employee_messages = daily_messages[daily_messages['sender'] == employee_name]
+    student_messages = daily_messages[daily_messages['sender'] != employee_name]
+
+    print(f"Employee messages count: {len(employee_messages)}")
+    print(f"Student messages count: {len(student_messages)}")
+
+    # Check if there are messages from the employee but none from the student
     if not employee_messages.empty and student_messages.empty:
+        print("Missed reply found.")
         return 'Yes'
+    
+    print("No missed reply.")
     return 'No'
+
+
 
     
 
@@ -122,38 +159,40 @@ def strfdelta(tdelta):
     # Format the string as HH:MM:SS
     return f"{hours:02}:{minutes:02}:{seconds:02}"    
 
-def calculate_lead_response_percentage(chat_df, employee_name, day_0_date):
+def calculate_lead_response(chat_df, employee_name, target_date):
     """
-    Calculates the lead response percentage based on message lengths for Day 0.
+    Calculates the lead response based on the number of texts exchanged between the employee and others (non-employee).
+    - If only the employee sent messages, the response is 100%.
+    - If only non-employees sent messages, the response is 0%.
+    - Otherwise, it's the ratio of the employee's texts to the total texts, constrained between 1% and 99%.
     """
-    day_0_messages = chat_df[chat_df['date'].dt.date == day_0_date]
+    # Filter messages for the target date
+    daily_messages = chat_df[chat_df['date'].dt.date == target_date]
+    
+    # Check if there are any messages from the employee and others on the target date
+    employee_messages = daily_messages[daily_messages['sender'] == employee_name]
+    non_employee_messages = daily_messages[daily_messages['sender'] != employee_name]
 
-    if day_0_messages.empty:
-        logging.debug(f"No messages found for Day 0: {day_0_date}")
+    # If only the employee sent messages
+    if not employee_messages.empty and non_employee_messages.empty:
         return 0
 
-    total_percentage_diff, pair_count = 0, 0
-    for index in range(len(day_0_messages) - 1):
-        current_message = day_0_messages.iloc[index]
-        next_message = day_0_messages.iloc[index + 1]
-        
-        # If current message is from employee and next message is from someone else (the lead)
-        if current_message['sender'] == employee_name and next_message['sender'] != employee_name:
-            employee_msg_length = len(current_message['message'])
-            lead_msg_length = len(next_message['message'])
-            if employee_msg_length > 0:
-                percentage_diff = (lead_msg_length / employee_msg_length) * 100
-                # Ensure the percentage does not exceed 100%
-                percentage_diff = min(percentage_diff, 100)
-                total_percentage_diff += percentage_diff
-                pair_count += 1
+    # If only non-employees sent messages
+    if employee_messages.empty and not non_employee_messages.empty:
+        return 100
 
-    if pair_count == 0:
-        logging.debug(f"No valid message pairs found for lead response calculation on Day 0: {day_0_date}")
-        return 0
+    # If both the employee and non-employees have sent messages
+    if not employee_messages.empty and not non_employee_messages.empty:
+        num_texts_employee = len(employee_messages)
+        num_texts_non_employee = len(non_employee_messages)
+        total_texts = num_texts_employee + num_texts_non_employee
+        lead_response = (num_texts_employee / total_texts) * 100
+        return max(min(lead_response, 99), 1)
 
-    average_lead_response = total_percentage_diff / pair_count
-    return average_lead_response
+    # If neither the employee nor non-employees sent messages
+    return 0
+
+
 
 def calculate_broken_chat(chat_df, employee_name, report_date):
     # Filter the messages for the given report date
@@ -180,16 +219,20 @@ def calculate_broken_chat(chat_df, employee_name, report_date):
         return 'Yes'
     return 'No'
 
-def count_missed_replies(chat_df, employee_name, target_date):
+def missed_replies_employee(chat_df, employee_name, target_date):
     # Filter messages for the target date
     daily_messages = chat_df[chat_df['date'].dt.date == target_date]
     
-    # Check if there are any messages from the lead with no reply from the employee
-    lead_messages = daily_messages[daily_messages['sender'] != employee_name]
-    employee_replies = daily_messages[daily_messages['sender'] == employee_name]
+    # Check if there are any messages from the student
+    student_messages = daily_messages[daily_messages['sender'] != employee_name]
     
-    if not lead_messages.empty and (employee_replies.empty or (lead_messages.iloc[-1]['time'] > employee_replies.iloc[-1]['time'])):
+    # Check if there are any messages from the employee
+    employee_messages = daily_messages[daily_messages['sender'] == employee_name]
+    
+    # If there are student messages but no employee messages, consider it a missed reply
+    if not student_messages.empty and employee_messages.empty:
         return 'Yes'
+    
     return 'No'
 
 # Function to read the chat file and return a dataframe
@@ -208,6 +251,18 @@ def extract_chat_name(chat_file_name):
         return extracted_name
     logging.warning(f"No match found for chat file name: {chat_file_name}")
     return None
+
+# Function to calculate the total count of missed replies by the student for the last N days
+def calculate_total_count_missed_replies_student(chat_df, employee_name, num_days):
+    total_count = 0
+
+    # Iterate over the last N days
+    for i in range(num_days):
+        target_date = report_date - timedelta(days=i)
+        count = count_missed_replies_student(chat_df, employee_name, target_date)
+        total_count += count
+
+    return total_count
 
 # Function to extract the start date from a chat file
 def get_chat_start_date(chat_df):
@@ -228,6 +283,10 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
     chat_name = extract_chat_name(chat_file_name)
     logging.debug(f"Chat name extracted: {chat_name}")
 
+
+
+    
+
     if chat_name is None:
         logging.warning(f"Chat name could not be extracted for file: {chat_file_name}")
         return None
@@ -247,20 +306,17 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
     # Calculate the time spent on Day 0 (report_date - 1 day)
     day_0_date = report_date - timedelta(days=1)
     day_0_time_spent = calculate_time_spent(chat_df, day_0_date, employee_folder)
-
+    #day_0_time_spent = timedelta(hours=int(day_0_time_spent.split(':')[0]), minutes=int(day_0_time_spent.split(':')[1]), seconds=int(day_0_time_spent.split(':')[2]))
     # Calculate the lead response based on text length difference for Day 0
-    lead_response_percentage_day_0 = calculate_lead_response_percentage(
-        chat_df, 
-        employee_folder,  # Assuming this is the employee's name
-        day_0_date
-    )
-    if lead_response_percentage_day_0 is None:
-        lead_response_percentage_day_0 = 0  # Set to 0 if it's None
+    lead_response_day_0 = calculate_lead_response(chat_df, employee_folder, day_0_date)
 
     day_0_date = report_date - timedelta(days=1)  # Assuming report_date is a datetime object of the target date
     broken_chat = calculate_broken_chat(chat_df, employee_folder, day_0_date)
-    missed_replies_day_0 = count_missed_replies(chat_df, employee_folder, day_0_date)
+    missed_replies_day_0 = missed_replies_employee(chat_df, employee_folder, day_0_date)
+    total_count_missed_reply_student = calculate_total_count_missed_replies_student(chat_df, employee_folder, 14)
     
+
+
     
     for i in range(7):  # Assuming you're checking the past 7 days
         check_date = report_date - timedelta(days=i)
@@ -288,13 +344,26 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
     'Day 2 (Student)': calculate_time_spent_student(chat_df, report_date - timedelta(days=3), employee_folder),
     }
 
+    # Inside the process_chat_file function, after calculating day_0_time_spent:
+    day_0_date = report_date - timedelta(days=1)
+    day_1_date = report_date - timedelta(days=2)
+    day_2_date = report_date - timedelta(days=3)
+
+    # Calculate time spent by student for Day 0, Day 1, and Day 2
+    time_spent_student_day_0 = calculate_time_spent_student(chat_df, day_0_date, employee_folder)
+    time_spent_student_day_1 = calculate_time_spent_student(chat_df, day_1_date, employee_folder)
+    time_spent_student_day_2 = calculate_time_spent_student(chat_df, day_2_date, employee_folder)
+
+
+
     total_time_spent_student = time_spent_student['Day 0 (Student)']
 
     broken_chat_student = is_broken_chat_student(chat_df, employee_folder, report_date)
 
-    missed_replies_student = count_missed_replies_student(chat_df, employee_folder, report_date)
+    mmissed_reply_student = count_missed_replies_studentt(chat_df, employee_folder, report_date)
+
     
-    missed_reply_student = check_missed_reply_student(chat_df, employee_folder, report_date)
+    
 
     # Determine Day Indicator based on chat start date
     if chat_start_date:
@@ -321,17 +390,21 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
         'Employee Folder': employee_folder,
         'Chat File Name': chat_name,        # Inserting the extracted chat name
         'Day Indicator': day_indicator,
-        'Total TS': day_0_time_spent,  # Use Day 0 time as the total time spent
-        'LR': lead_response_percentage_day_0,  # Add the lead response here
-        'Broken Chat': 'Yes' if broken_chat else 'No',
-        'Missed Replies (BY Officer)': missed_replies_day_0,
-        'TCBC (Employee)': broken_chat_count,
-        'TCMR (Employee)': missed_replies_count,
+        'Total_Time_Spent_Employee': day_0_time_spent,  # Use Day 0 time as the total time spent
+        'LR': lead_response_day_0,  # Add the lead response here
+        'Broken Chat(Employee)': 'Yes' if broken_chat else 'No',
+        'Missed Replies (Employee)': missed_replies_day_0,
+        'Count_Broken_Chat_Employee (Employee)': broken_chat_count,
+        'Count_Missed_Replies_Missed_Replies (Employee)': missed_replies_count,
         'Date of Max time': max_time_spent[0],
         **time_spent,
         'Total Time Spent (Student)': total_time_spent_student,
         'Broken Chat (Student)': broken_chat_student,
-        'Missed Replies (Student)': missed_replies_student,
+        'Missed Replies (Student)': mmissed_reply_student,
+        'Day_0_Time_Spent_Student': time_spent_student_day_0,  # Add time spent for Day 0
+        'Day_1_Time_Spent_Student': time_spent_student_day_1,  # Add time spent for Day 1
+        'Day_2_Time_Spent_Student': time_spent_student_day_2,
+        'Total_Count_Missed_Reply_Chat_Student' : total_count_missed_reply_student,
     }
     logging.debug(f"Row created for chat: {row}")
     return row
@@ -369,8 +442,8 @@ all_chats_df = process_team_folders(main_directory_path, report_date)
 
 
 # Save to a CSV file
-csv_file_path = 'C:\ChatAnalysisProject/chat_data8.csv'  # Define your desired path and file name
+csv_file_path = 'C:\ChatAnalysisProject/chat_data9.csv'  # Define your desired path and file name
 all_chats_df.to_csv(csv_file_path, index=False)
 print(f"DataFrame saved as CSV at {csv_file_path}")
 # Display the result
-print(all_chats_df)
+print(all_chats_df)    
