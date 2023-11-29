@@ -22,15 +22,84 @@ def process_line(line):
     else:
         return None
 
+def process_line_for_delay(line):
+    pattern = r'(\d{2}/\d{2}/\d{2}), (\d{1,2}:\d{2}\s?[APMapm]{2}) - (.*?): (.*)'
+    match = re.match(pattern, line)
+    if match:
+        date_str, time_str, sender, message = match.groups()
+        datetime_str = date_str + ' ' + time_str
+        datetime_obj = datetime.strptime(datetime_str, '%d/%m/%y %I:%M %p')
+        return {'datetime': datetime_obj, 'sender': sender, 'message': message}
+    else:
+        return None
 
+# Function to read the chat file specifically for delay calculation
+def read_chat_file_for_delay(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+    return pd.DataFrame([process_line_for_delay(line) for line in lines if process_line_for_delay(line) is not None])        
+    
 def calculate_time_spent_student(chat_df, target_date, employee_name):
     student_messages = chat_df[(chat_df['date'].dt.date == target_date) & (chat_df['sender'] != employee_name)]
     total_chars = student_messages['message'].str.len().sum()
     time_spent_seconds = (total_chars / 10) * 5
-    return strfdelta(timedelta(seconds=time_spent_seconds))
+    return strfdelta(timedelta(seconds=time_spent_seconds)) 
 
-    
-    
+def format_delay_time(seconds):
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    if hours > 0:
+        return f"{hours} hr {minutes} mins"
+    else:
+        return f"{minutes} mins"
+
+def calculate_employee_delay(chat_df, employee_name, target_date):
+    delays = []
+    delay_times = []
+    messages_for_reference = []
+
+    last_student_message_time = None
+    employee_responded_after_student = False
+
+    delay_counter = 1
+
+    for index, row in chat_df.iterrows():
+        # Ensure datetime is correctly formatted
+        row_date = row['datetime'].date()
+
+        if row_date != target_date:
+            continue
+
+        if row['sender'] != employee_name:
+            last_student_message_time = row['datetime']
+            employee_responded_after_student = False
+        elif row['sender'] == employee_name and last_student_message_time is not None and not employee_responded_after_student:
+            time_diff = row['datetime'] - last_student_message_time
+
+            if time_diff > timedelta(minutes=15):
+                formatted_time = row['datetime'].strftime('%d %b %Y %I:%M%p')
+                delays.append(f"{delay_counter} - {formatted_time}")
+                delay_counter += 1
+
+                delay_times.append(format_delay_time(time_diff.seconds))
+
+                start_index = max(0, index - 5)
+                end_index = min(index + 5, len(chat_df))
+                context_messages = chat_df.iloc[start_index:end_index]
+
+                formatted_context_messages = [f"{idx+1} - {message_row['datetime'].strftime('%d %b %Y %I:%M%p')} - {message_row['sender']}: {message_row['message']}" for idx, message_row in context_messages.iterrows()]
+                formatted_message = "\n".join(formatted_context_messages)
+                messages_for_reference.append(formatted_message)
+
+            employee_responded_after_student = True
+
+    # Combine the lists into multiline strings
+    delays_str = "\n".join(delays)
+    delay_times_str = "\n".join(delay_times)
+    messages_for_reference_str = "\n".join(messages_for_reference)
+
+    return delays_str, delay_times_str, messages_for_reference_str
+
 def is_broken_chat_student(chat_df, employee_name, target_date):
     # Adjust for the previous day
     previous_day = target_date - timedelta(days=1)
@@ -57,10 +126,6 @@ def is_broken_chat_student(chat_df, employee_name, target_date):
         return 'Yes'
 
     return 'No'
-
-   
-    
-    
     
 def count_missed_replies_student(chat_df, employee_name, report_date):
     count = 0
@@ -73,31 +138,25 @@ def count_missed_replies_student(chat_df, employee_name, report_date):
             count += 1
     return count
 
-
-
 def count_missed_replies_studentt(chat_df, employee_name, target_date):
     previous_day = target_date - timedelta(days=1)
-    print(f"Checking for missed replies on: {previous_day}")
+    #print(f"Checking for missed replies on: {previous_day}")
 
     daily_messages = chat_df[chat_df['date'].dt.date == previous_day]
     
     employee_messages = daily_messages[daily_messages['sender'] == employee_name]
     student_messages = daily_messages[daily_messages['sender'] != employee_name]
 
-    print(f"Employee messages count: {len(employee_messages)}")
-    print(f"Student messages count: {len(student_messages)}")
+    #print(f"Employee messages count: {len(employee_messages)}")
+    #print(f"Student messages count: {len(student_messages)}")
 
     # Check if there are messages from the employee but none from the student
     if not employee_messages.empty and student_messages.empty:
-        print("Missed reply found.")
+        #print("Missed reply found.")
         return 'Yes'
     
-    print("No missed reply.")
+    #print("No missed reply.")
     return 'No'
-
-
-
-    
 
 def count_missed_replies_last_7_days(chat_df, employee_name, start_date):
     missed_replies_count = 0
@@ -121,23 +180,17 @@ def count_missed_replies_last_7_days(chat_df, employee_name, start_date):
 
     return missed_replies_count
 
-
-
-
 # Function to calculate the time spent in chat based on message lengths
 def calculate_time_spent(chat_df, target_date, employee_name):
-    print(f"Target date: {target_date}")
-    print(f"Employee name: {employee_name}")
-    print("Sample chat_df dates:", chat_df['date'].head())
 
     daily_messages = chat_df[(chat_df['date'].dt.date == target_date) & (chat_df['sender'] == employee_name)]
     
     # Debug print to see what's inside daily_messages after filtering
-    print(f"Daily messages for {employee_name} on {target_date}:")
-    print(daily_messages)
+    #print(f"Daily messages for {employee_name} on {target_date}:")
+    #print(daily_messages)
 
     if daily_messages.empty:
-        print(f"No messages found for {employee_name} on {target_date}.")
+        #print(f"No messages found for {employee_name} on {target_date}.")
         return '00:00:00'
     
     total_chars = daily_messages['message'].str.len().sum()
@@ -192,8 +245,6 @@ def calculate_lead_response(chat_df, employee_name, target_date):
     # If neither the employee nor non-employees sent messages
     return 0
 
-
-
 def calculate_broken_chat(chat_df, employee_name, report_date):
     # Filter the messages for the given report date
     messages_on_date = chat_df[chat_df['date'].dt.date == report_date]
@@ -235,6 +286,34 @@ def missed_replies_employee(chat_df, employee_name, target_date):
     
     return 'No'
 
+def missed_replies_employee_after_working_hrs(chat_df, employee_name, target_date):
+    # Define working hours
+    if not isinstance(target_date, datetime):
+        raise ValueError("target_date must be a datetime object")
+
+    work_start_time = datetime(target_date.year, target_date.month, target_date.day, 11, 0, 0)
+    work_end_time = datetime(target_date.year, target_date.month, target_date.day, 20, 0, 0)
+
+    # Filter messages for the target date using 'datetime' column
+    daily_messages = chat_df[chat_df['datetime'].dt.date == target_date.date()]
+    
+    # Check if there are any messages from the student
+    student_messages = daily_messages[daily_messages['sender'] != employee_name]
+    
+    # Check if there are any messages from the employee
+    employee_messages = daily_messages[daily_messages['sender'] == employee_name]
+
+    # If there are student messages but no employee messages
+    if not student_messages.empty and employee_messages.empty:
+        # Check if any student message is within working hours
+        for _, row in student_messages.iterrows():
+            message_time = row['datetime']
+            if work_start_time <= message_time <= work_end_time:
+                return 'Yes'  # Missed reply within working hours
+        return 'No'  # All student messages are outside working hours
+    
+    return 'No'
+
 # Function to read the chat file and return a dataframe
 def read_chat_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -243,13 +322,13 @@ def read_chat_file(file_path):
 
 # Function to extract the chat file name based on a specific pattern
 def extract_chat_name(chat_file_name):
-    logging.debug(f"Extracting name from chat file: {chat_file_name}")
+    #logging.debug(f"Extracting name from chat file: {chat_file_name}")
     match = re.search(r'WhatsApp Chat with _?(.*?)(?:\(\d+\))?_?\.txt', chat_file_name)
     if match:
         extracted_name = re.sub(r'_*(?:\(\d+\))?$', '', match.group(1))
-        logging.debug(f"Extracted chat name: {extracted_name}")
+        #logging.debug(f"Extracted chat name: {extracted_name}")
         return extracted_name
-    logging.warning(f"No match found for chat file name: {chat_file_name}")
+    #logging.warning(f"No match found for chat file name: {chat_file_name}")
     return None
 
 # Function to calculate the total count of missed replies by the student for the last N days
@@ -267,6 +346,7 @@ def calculate_total_count_missed_replies_student(chat_df, employee_name, num_day
 # Function to extract the start date from a chat file
 def get_chat_start_date(chat_df):
     if not chat_df.empty:
+        #logging.debug(f"Extracted chat name: {chat_df['date'].min().date()}")
         return chat_df['date'].min().date()
     return None
 
@@ -278,30 +358,44 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
     max_time_spent = ('', '00:00:00')  # (date, time)
 
     chat_file_name = os.path.basename(file_path)
-    logging.debug(f"Processing chat file: {chat_file_name}")
+    #logging.debug(f"Processing chat file: {chat_file_name}")
 
     chat_name = extract_chat_name(chat_file_name)
-    logging.debug(f"Chat name extracted: {chat_name}")
+    #logging.debug(f"Chat name extracted: {chat_name}")
 
 
 
     
 
     if chat_name is None:
-        logging.warning(f"Chat name could not be extracted for file: {chat_file_name}")
+        #logging.warning(f"Chat name could not be extracted for file: {chat_file_name}")
         return None
     if chat_name in processed_chats:
-        logging.info(f"Chat file already processed: {chat_name}")
+        #logging.info(f"Chat file already processed: {chat_name}")
         return None
 
     processed_chats.add(chat_name)
-    logging.debug(f"Chat file added to processed list: {chat_name}")
+    #logging.debug(f"Chat file added to processed list: {chat_name}")
 
     chat_df = read_chat_file(file_path)
     if chat_df.empty:
-        logging.warning(f"Chat DataFrame is empty for file: {chat_file_name}")
+        #logging.warning(f"Chat DataFrame is empty for file: {chat_file_name}")
         return None
     chat_start_date = get_chat_start_date(chat_df)
+
+    # Use read_chat_file_for_delay specifically for delay calculations
+    chat_df_for_delay = read_chat_file_for_delay(file_path)
+    if chat_df_for_delay.empty:
+        return None
+
+    
+    target_date = report_date - timedelta(days=1)
+
+    # Call the function with the target date
+    delays, delay_times, messages_for_reference = calculate_employee_delay(chat_df_for_delay, employee_folder, target_date)
+    
+
+
 
     # Calculate the time spent on Day 0 (report_date - 1 day)
     day_0_date = report_date - timedelta(days=1)
@@ -309,10 +403,25 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
     #day_0_time_spent = timedelta(hours=int(day_0_time_spent.split(':')[0]), minutes=int(day_0_time_spent.split(':')[1]), seconds=int(day_0_time_spent.split(':')[2]))
     # Calculate the lead response based on text length difference for Day 0
     lead_response_day_0 = calculate_lead_response(chat_df, employee_folder, day_0_date)
-
+     
     day_0_date = report_date - timedelta(days=1)  # Assuming report_date is a datetime object of the target date
     broken_chat = calculate_broken_chat(chat_df, employee_folder, day_0_date)
     missed_replies_day_0 = missed_replies_employee(chat_df, employee_folder, day_0_date)
+
+    # Get the current datetime
+    today_datetime = datetime.now()
+
+    # Get today's date with time part (assuming start of the day as default)
+    today_date_1 = today_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # If today_date.weekday() logic remains the same
+    # ...
+
+    # Now, when you calculate target_date, it remains a datetime object
+    target_date_1 = today_date_1 - timedelta(days=1)
+
+
+    Actual_missed_Reply = missed_replies_employee_after_working_hrs(chat_df_for_delay, employee_folder, target_date_1)
     total_count_missed_reply_student = calculate_total_count_missed_replies_student(chat_df, employee_folder, 14)
     
 
@@ -343,7 +452,7 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
     'Day 1 (Student)': calculate_time_spent_student(chat_df, report_date - timedelta(days=2), employee_folder),
     'Day 2 (Student)': calculate_time_spent_student(chat_df, report_date - timedelta(days=3), employee_folder),
     }
-
+    
     # Inside the process_chat_file function, after calculating day_0_time_spent:
     day_0_date = report_date - timedelta(days=1)
     day_1_date = report_date - timedelta(days=2)
@@ -362,25 +471,35 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
 
     mmissed_reply_student = count_missed_replies_studentt(chat_df, employee_folder, report_date)
 
-    
-    
-
-    # Determine Day Indicator based on chat start date
-    if chat_start_date:
-        if (report_date - chat_start_date).days == 1:
-            day_indicator = 'Day 0'
-        elif (report_date - chat_start_date).days == 2:
-            day_indicator = 'Day 1'
-        elif (report_date - chat_start_date).days == 3:
-            day_indicator = 'Day 2'
-        else:
-            day_indicator = 'OLD'  # For chats that don't fall into Day 0, Day 1, or Day 2
-
     # Calculate the time spent on each day relative to the report date
     time_spent = {}
     for i in range(1, 4):  # Start from 1 since we want Day 0 to be the day before the report date
         target_date = report_date - timedelta(days=i)
         time_spent[f'Day {i-1}'] = calculate_time_spent(chat_df, target_date, employee_folder)
+    
+    target_date_for_chat_start_Date = report_date - timedelta(days=1)
+    day_indicator_employee = (target_date_for_chat_start_Date - chat_start_date).days
+    #logging.debug(f"day indicator employee: {day_indicator_employee}")
+    # Determine Day Indicator based on chat start date
+    if chat_start_date:
+        if (target_date_for_chat_start_Date - chat_start_date).days == 0:
+          
+            day_indicator = 'Day 0'
+        elif (target_date_for_chat_start_Date - chat_start_date).days == 1:
+            
+            day_indicator = 'Day 1'
+        elif (target_date_for_chat_start_Date - chat_start_date).days == 2:
+            
+            day_indicator = 'Day 2'
+
+        elif (target_date_for_chat_start_Date - chat_start_date).days == 3:
+            
+            day_indicator = 'Day 3'
+
+        else:
+            day_indicator = 'OLD'  # For chats that don't fall into Day 0, Day 1, or Day 2
+
+    
 
     main_directory_name = os.path.basename(main_directory)
 
@@ -405,16 +524,31 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
         'Day_1_Time_Spent_Student': time_spent_student_day_1,  # Add time spent for Day 1
         'Day_2_Time_Spent_Student': time_spent_student_day_2,
         'Total_Count_Missed_Reply_Chat_Student' : total_count_missed_reply_student,
+        'Employee Delays': delays,
+        'Delay Durations': delay_times,
+        'Messages for Reference': messages_for_reference,
+        'Actual Missed Reply from Employee': Actual_missed_Reply,
     }
-    logging.debug(f"Row created for chat: {row}")
+    #logging.debug(f"Row created for chat: {row}")
     return row
 
-
 # Main directory path construction and report date setting
-report_date_str = '11-24-2023'  # Replace with the desired report date in MM-DD-YYYY format
-report_date = datetime.strptime(report_date_str, '%m-%d-%Y').date()
+# Main directory path construction and report date setting
+local_date_format = '%Y-%m-%d'  # Adjust this to your local date format
 main_directory = 'C:\\ChatAnalysisProject'  # Replace with your base directory path
-main_directory_path = os.path.join(main_directory, report_date_str)
+
+# Get today's date
+today_date = datetime.now().date()
+
+# Check the day of the week
+if today_date.weekday() in range(1, 6):  # Tuesday to Saturday
+    report_date = today_date
+else:  # Monday
+    # You can adjust the number of days to subtract based on your specific requirements
+    report_date = today_date - timedelta(days=2)
+
+report_date_str_local = report_date.strftime(local_date_format)
+main_directory_path = os.path.join(main_directory, report_date_str_local)
 
 # Function to navigate through the directory structure and process all chat files
 def process_team_folders(main_directory, report_date):
@@ -434,7 +568,7 @@ def process_team_folders(main_directory, report_date):
                     all_data.append(row)
                     logging.debug(f"Row appended for chat file: {chat_file}")
     df = pd.DataFrame(all_data)
-    logging.debug(f"DataFrame constructed with {len(df)} rows")
+    #logging.debug(f"DataFrame constructed with {len(df)} rows")
     return df
 
 # Process all team folders and chats based on the report date
@@ -442,8 +576,8 @@ all_chats_df = process_team_folders(main_directory_path, report_date)
 
 
 # Save to a CSV file
-csv_file_path = 'C:\ChatAnalysisProject/chat_data9.csv'  # Define your desired path and file name
+csv_file_path = 'C:\ChatAnalysisProject/chat_data01.csv'  # Define your desired path and file name
 all_chats_df.to_csv(csv_file_path, index=False)
-print(f"DataFrame saved as CSV at {csv_file_path}")
+#print(f"DataFrame saved as CSV at {csv_file_path}")
 # Display the result
-print(all_chats_df)    
+#print(all_chats_df)
