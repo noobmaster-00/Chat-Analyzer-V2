@@ -27,6 +27,21 @@ def parse_chat_group_name(file_name, team_name):
 
     return group_name, expected_format
 
+def remove_duplicate_files(df):
+    # Function to clean file names by removing the (number) suffix
+    def clean_file_name(file_name):
+        return re.sub(r'\(\d+\)\.txt$', '.txt', file_name)
+
+    # Apply the cleaning function to each file name
+    df['Cleaned File'] = df['Chat Name'].apply(clean_file_name)
+
+    # Keep only the first occurrence of each cleaned file name
+    df_cleaned = df.drop_duplicates(subset='Cleaned File', keep='first')
+
+    # Drop the temporary 'Cleaned File' column
+    df_cleaned.drop(columns=['Cleaned File'], inplace=True)
+
+    return df_cleaned
 
 def fetch_chat_data(date_directory):
     # Define the columns for the DataFrame
@@ -47,26 +62,29 @@ def fetch_chat_data(date_directory):
                         if os.path.isdir(person_path):
                             # Process each chat file in the 'Person' subdirectory
                             for file in os.listdir(person_path):
-                                if file.endswith('.txt'):  # Assuming chat files are .txt files
+                                if file.endswith('.txt'):
                                     file_path = os.path.join(person_path, file)
                                     file_size = os.path.getsize(file_path)
-
-                                    # Extract chat group name and check format
                                     chat_group_name, expected_format = parse_chat_group_name(file, team_folder)
-
-
-
-                                    # Add the extracted details to the data list
                                     data.append([date_folder, team_folder, person_folder, file, chat_group_name, expected_format, file_size])
+
+    # Debugging: Check the first few entries of the data list
+    print("First few entries of data list:", data[:5])
 
     # Create a DataFrame from the data list
     df = pd.DataFrame(data, columns=columns)
+
+    # Debugging: Print column names to confirm
+    print("DataFrame columns:", df.columns)
     return df
 
+
 # Replace 'your_date_directory_path' with the path to the 'Date' directory
-date_directory = 'C:\\Users\\mauriceyeng\\Python\\Daily-Reports\\Test\\V1_maurice\\TestingData'
+date_directory = 'C:\\Users\\maurice\\Downloads\\drive-download-20231129T124901Z-001'
 chat_data_df = fetch_chat_data(date_directory)
+chat_data_df = remove_duplicate_files(chat_data_df)
+
 
 # Display the DataFrame
-chat_data_df.head(10)
+#chat_data_df.head(10)
 
