@@ -168,7 +168,7 @@ def create_graphs(df, person_identifier, base_directory):
     plt.yticks(fontsize=10)
 
     # Set x-axis to show the range from the first chat to the last chat
-    ax.set_xlim(first_chat_time, last_chat_time)
+    ax.set_xlim(first_chat_time - 1, last_chat_time + 1)
     ax.xaxis.set_major_locator(ticker.MaxNLocator(96))  # Set locator for 15-minute intervals
 
     # Set y-axis dynamic range based on the maximum chat activity with a buffer
