@@ -157,7 +157,11 @@ def create_graphs(df, person_identifier, base_directory):
     ax.bar(df.index, person_chat_activity, color='red', width=1, label=f'Person {person_identifier}')
     ax.plot(df.index, trend_data, color='white', linestyle=':', label='Student')
     #ax.scatter(df.index[trend_data > 0], trend_data[trend_data > 0], color='white', s=8, label='Student')
-
+    
+    # Draw white lines for the axes
+    ax.axhline(0, color='white', linewidth=3)
+    ax.axvline(first_chat_time, color='white', linewidth=3)
+    
     # Rotate x-axis labels to prevent overlap and increase label font sizes
     plt.xticks(rotation=90, fontsize=12)
     
@@ -177,9 +181,10 @@ def create_graphs(df, person_identifier, base_directory):
     ax.set_title(f'Chat Activity for {person_identifier}', fontsize=14)
 
     # Create and set the legend
-    legend = ax.legend()
+    legend = ax.legend(facecolor='white', edgecolor='darkgrey', fontsize=10, fancybox=True)
     for text in legend.get_texts():
-        text.set_color('white')
+        text.set_color('black')
+        text.set_weight('bold')
 
     # Saving the graph
     graph_file_name = f"{person_identifier}.png"
