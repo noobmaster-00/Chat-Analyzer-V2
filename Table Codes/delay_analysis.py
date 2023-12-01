@@ -29,9 +29,8 @@ def list_chat_files(date_directory):
 
 def parse_chat_file(file_path, expected_date_minus_one):
     chat_data = []
-    last_person_time = None
-    last_sender = None
-    delay_count = 0
+    last_non_person_time = None  # Tracks the time of the last non-person message
+    delay_count = 0  # To count the number of delays
 
     with open(file_path, 'r', encoding='utf-8') as file:
         for line in file:
@@ -46,22 +45,29 @@ def parse_chat_file(file_path, expected_date_minus_one):
                 continue
 
             date_time = pd.to_datetime(date_time_str, format='%d/%m/%y, %I:%M %p')
+
             if date_time.date() != expected_date_minus_one:
                 continue
 
             is_person = sender is not None and re.match(r'^[+\d\s-]+$', sender) is None
+
+            # Calculate delay
             delay = False
-            if is_person:
-                if last_person_time and sender != last_sender and (date_time - last_person_time).total_seconds() > 900:
-                    delay = True
+            if is_person and last_non_person_time:
+                diff = date_time - last_non_person_time
+                delay = diff.total_seconds() > 900  # 15 minutes in seconds
+                if delay:
                     delay_count += 1
-                if not delay:
-                    last_person_time = date_time
-                    last_sender = sender
 
             chat_data.append((date_time, sender, is_person, delay))
+
+            # Update last_non_person_time for non-person messages
+            if not is_person:
+                last_non_person_time = date_time
+
     logging.debug(f"File parsed: {file_path}. Delays detected: {delay_count}")
-    return chat_data, extract_group_name(file_path)
+    return chat_data
+
 
 def create_template_dataframe():
     times = [datetime.datetime(2000, 1, 1, 0, 0) + datetime.timedelta(minutes=1 * i) for i in range(1440)]
@@ -128,9 +134,15 @@ for file in chat_files:
     expected_date_minus_one = folder_date - datetime.timedelta(days=1)
     key = f"{folder_date.strftime('%Y-%m-%d')}_{person}"
 
+    # Extract group_name using the dedicated function
+    group_name = extract_group_name(file)
+
     if key not in dataframes:
         dataframes[key] = create_template_dataframe()
-    parsed_data, group_name = parse_chat_file(file, expected_date_minus_one)
+    
+    # Get parsed_data without expecting group_name in return
+    parsed_data = parse_chat_file(file, expected_date_minus_one)
+    
     dataframes[key] = populate_dataframe(dataframes[key], parsed_data, group_name)
     logging.debug(f"Dataframe created for key: {key}")
 
