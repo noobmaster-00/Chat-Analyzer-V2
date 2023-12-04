@@ -275,3 +275,39 @@ def main_analysis(root_directory):
 
 # Run the analysis
 delay_analysis_table = main_analysis(root_directory)
+
+Delay Analyzer - 04/12/2023
+
+1. Define Functions:
+   - list_chat_files(date_directory): Lists all chat files in the specified directory.
+   - parse_chat_file(file_path, expected_date_minus_one): Parses a chat file and extracts relevant data.
+   - create_template_dataframe(): Creates a template DataFrame with 1440 rows (one for each minute of the day).
+   - populate_dataframe(df, parsed_data, group_name): Populates the DataFrame with parsed chat data.
+   - extract_group_name(file_path): Extracts the group name from the file path.
+   - calculate_active_chats(df): Calculates the number of active chats for each minute.
+
+2. Initialize Main Data:
+   - Set the date_directory path.
+   - Initialize an empty dictionary for dataframes (dataframes = {}).
+
+3. Process Chat Files:
+   FOR each file in chat_files:
+       - Extract date and person information.
+       - Parse the chat file.
+       - Create or retrieve the person's DataFrame.
+       - Populate the DataFrame with parsed data.
+
+4. Create Active Chats DataFrame:
+   - Initialize the Active Chats DataFrame with the same index as the main DataFrame and a single column 'active_chats'.
+
+5. Calculate Active Chats:
+   FOR each key, df in dataframes:
+       - Call calculate_active_chats(df) to populate the Active Chats DataFrame.
+
+6. Merge Active Chats with Main DataFrames:
+   FOR each key, df in dataframes:
+       - Merge the Active Chats DataFrame with the main DataFrame.
+       - Ensure 'active_chats' is the second column in the merged DataFrame.
+
+7. Finalize and Log Data:
+   - Optionally, log or output the final DataFrames for review.
