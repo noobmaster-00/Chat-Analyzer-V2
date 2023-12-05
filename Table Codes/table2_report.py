@@ -339,9 +339,15 @@ def missed_replies_employee(chat_df, employee_name, target_date):
 def missed_replies_employee_after_working_hrs(chat_df, employee_name, target_date, team_folder):
     # Check if the team folder is 'KAM Team' to define different working hours
     if team_folder == 'EWYL':
-        # KAM Team working hours: 7:30 AM to 4:00 PM
+        # EWYL Team working hours: 7:30 AM to 4:00 PM
         work_start_time = datetime(target_date.year, target_date.month, target_date.day, 7, 30, 0)
         work_end_time = datetime(target_date.year, target_date.month, target_date.day, 16, 30, 0)
+    
+    if team_folder == 'KAM':
+       # KAM Team working hours: 7:30 AM to 4:00 PM
+        work_start_time = datetime(target_date.year, target_date.month, target_date.day, 11, 30, 0)
+        work_end_time = datetime(target_date.year, target_date.month, target_date.day, 21, 30, 0)
+
     else:
         # Default working hours for other teams: 12:00 AM to 12:00 PM
         work_start_time = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0)
