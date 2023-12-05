@@ -149,3 +149,13 @@ for file in chat_files:
 # Example to show a dataframe
 example_key = next(iter(dataframes))  # Just for demonstration
 logging.debug(f"Example dataframe for key {example_key}: \n{dataframes[example_key]}")
+
+
+csv_save_directory = "C:\\Users\\mauriceyeng\\Python\\Daily-Reports\\Chat CSVs"
+os.makedirs(csv_save_directory, exist_ok=True)
+
+# Saving each DataFrame as a CSV
+for key, df in dataframes.items():
+    csv_file_path = os.path.join(csv_save_directory, f"{key}.csv")
+    df.to_csv(csv_file_path)
+    print(f"file saved as {key}")
