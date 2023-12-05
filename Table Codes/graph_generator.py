@@ -181,7 +181,7 @@ def create_graphs(df, person_identifier, base_directory):
     ax.set_title(f'Chat Activity for {person_identifier}', fontsize=14)
 
     # Create and set the legend
-    legend = ax.legend(facecolor='white', edgecolor='darkgrey', fontsize=10, fancybox=True)
+    legend = ax.legend(facecolor='white', edgecolor='red', fontsize=12, fancybox=True)
     for text in legend.get_texts():
         text.set_color('black')
         text.set_weight('bold')
@@ -195,7 +195,7 @@ def create_graphs(df, person_identifier, base_directory):
 
 
 # Main script
-date_directory = "C:\\Users\\mauriceyeng\Python\\Daily-Reports\\Test\\V1_maurice\\drive-download-20231130T060206Z-001"
+date_directory = "C:\\Users\\mauriceyeng\\Python\\Daily-Reports\\Chat Folder from Drive\\drive-download-20231204T064112Z-001"
 chat_files = list_chat_files(date_directory)
 person_dataframes = process_person_chats(chat_files)
 
