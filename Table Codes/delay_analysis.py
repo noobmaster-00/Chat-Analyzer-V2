@@ -118,7 +118,7 @@ def extract_group_name(file_path):
     group_name = re.sub(r'\(\d+\)$', '', group_name)  # Remove any numbers in parentheses at the end
     return group_name  # Removed the extra "_person" suffix
 
-date_directory = "C:\\Users\\maurice\\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\drive-download-20231201T052455Z-001"
+date_directory = "C:\\Users\\maurice\\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\drive-download-20231204T064112Z-001"
 chat_files = list_chat_files(date_directory)
 dataframes = {}
 
