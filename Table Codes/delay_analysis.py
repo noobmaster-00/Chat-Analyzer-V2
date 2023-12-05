@@ -118,7 +118,7 @@ def extract_group_name(file_path):
     group_name = re.sub(r'\(\d+\)$', '', group_name)  # Remove any numbers in parentheses at the end
     return group_name  # Removed the extra "_person" suffix
 
-date_directory = "C:\\Users\\maurice\\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\drive-download-20231204T064112Z-001"
+date_directory = "C:\\Users\\maurice\\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\drive-download-20231205T080950Z-001"
 chat_files = list_chat_files(date_directory)
 dataframes = {}
 
@@ -151,7 +151,7 @@ example_key = next(iter(dataframes))  # Just for demonstration
 logging.debug(f"Example dataframe for key {example_key}: \n{dataframes[example_key]}")
 
 
-csv_save_directory = "C:\\Users\\mauriceyeng\\Python\\Daily-Reports\\Chat CSVs"
+csv_save_directory = "C:\\Users\\maurice\\Documents\\Chat-Analyzer-V2\\Chat CSVs"
 os.makedirs(csv_save_directory, exist_ok=True)
 
 # Saving each DataFrame as a CSV

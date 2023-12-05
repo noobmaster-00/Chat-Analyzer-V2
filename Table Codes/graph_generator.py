@@ -25,37 +25,19 @@ def list_chat_files(date_directory):
 
 def parse_chat_file(file_path, expected_date_minus_one):
     chat_data = []
-    last_non_person_time = None  # Tracks the time of the last non-person message
 
     with open(file_path, 'r', encoding='utf-8') as file:
         for line in file:
             message_match = re.match(r'(\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2} [ap]m) - (.*?): (.*)', line)
-            system_match = re.match(r'(\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2} [ap]m) - (.*)', line)
             if message_match:
-                date_time_str, sender, message = message_match.groups()
-            elif system_match:
-                date_time_str, info = system_match.groups()
-                sender = None
-            else:
-                continue
+                date_time_str, sender, _ = message_match.groups()
+                date_time = pd.to_datetime(date_time_str, format='%d/%m/%y, %I:%M %p')
 
-            date_time = pd.to_datetime(date_time_str, format='%d/%m/%y, %I:%M %p')
+                if date_time.date() != expected_date_minus_one:
+                    continue
 
-            if date_time.date() != expected_date_minus_one:
-                continue
-
-            is_person = sender is not None and re.match(r'^[+\d\s-]+$', sender) is None
-
-            # Calculate delay
-            delay = False
-            if is_person and last_non_person_time:
-                diff = date_time - last_non_person_time
-                delay = diff.total_seconds() > 900  # 15 minutes in seconds
-
-            chat_data.append((date_time, sender, is_person, delay))
-
-            if not is_person:
-                last_non_person_time = date_time
+                is_person = sender is not None and re.match(r'^[+\d\s-]+$', sender) is None
+                chat_data.append((date_time, sender, is_person))
 
     return chat_data
 
@@ -70,29 +52,26 @@ def populate_dataframe(df, parsed_data, start_column_index):
     new_columns = {}  # Dictionary to hold new data before concatenation
 
     for entry in parsed_data:
-        date_time, sender, is_person, delay = entry
+        date_time, sender, is_person = entry
         interval_index = min((date_time.hour * 60 + date_time.minute) // 1, 1439)
         interval = df.index[interval_index]
 
         # Initialize columns in new_columns dictionary if not exist
-        if (start_column_index not in new_columns):
+        if start_column_index not in new_columns:
             new_columns[start_column_index] = pd.Series(0, index=df.index)
-        if (start_column_index + 1 not in new_columns):
+        if start_column_index + 1 not in new_columns:
             new_columns[start_column_index + 1] = pd.Series(0, index=df.index)
-        if (start_column_index + 2 not in new_columns):
-            new_columns[start_column_index + 2] = pd.Series(False, index=df.index)  # For delay column
 
         # Populate the new_columns dictionary
         if is_person:
             new_columns[start_column_index].at[interval] = 1
-            new_columns[start_column_index + 2].at[interval] = delay  # Set delay flag
         else:
             new_columns[start_column_index + 1].at[interval] = 1
 
     # Concatenate new columns to the DataFrame at once
     df = pd.concat([df, pd.DataFrame(new_columns)], axis=1)
 
-    return df, start_column_index + 3
+    return df, start_column_index + 2
 
 
 def process_person_chats(chat_files):
@@ -195,7 +174,7 @@ def create_graphs(df, person_identifier, base_directory):
 
 
 # Main script
-date_directory = "C:\\ChatAnalysisProject"
+date_directory = "C:\\Users\\maurice\\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\drive-download-20231205T080950Z-001"
 chat_files = list_chat_files(date_directory)
 person_dataframes = process_person_chats(chat_files)
 
