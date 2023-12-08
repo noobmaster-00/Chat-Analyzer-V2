@@ -339,9 +339,15 @@ def missed_replies_employee(chat_df, employee_name, target_date):
 def missed_replies_employee_after_working_hrs(chat_df, employee_name, target_date, team_folder):
     # Check if the team folder is 'KAM Team' to define different working hours
     if team_folder == 'EWYL':
-        # KAM Team working hours: 7:30 AM to 4:00 PM
+        # EWYL Team working hours: 7:30 AM to 4:00 PM
         work_start_time = datetime(target_date.year, target_date.month, target_date.day, 7, 30, 0)
         work_end_time = datetime(target_date.year, target_date.month, target_date.day, 16, 30, 0)
+    
+    if team_folder == 'KAM':
+       # KAM Team working hours: 7:30 AM to 4:00 PM
+        work_start_time = datetime(target_date.year, target_date.month, target_date.day, 11, 30, 0)
+        work_end_time = datetime(target_date.year, target_date.month, target_date.day, 21, 30, 0)
+
     else:
         # Default working hours for other teams: 12:00 AM to 12:00 PM
         work_start_time = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0)
@@ -615,7 +621,7 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
 # Main directory path construction and report date setting
 # Main directory path construction and report date setting
 local_date_format = '%Y-%m-%d'  # Adjust this to your local date format
-main_directory = 'C:\\ChatAnalysisProject'  # Replace with your base directory path
+main_directory = 'C:\\Users\\ayush\\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\2023-12-06-20231206T061845Z-001'  # Replace with your base directory path
 
 # Get today's date
 today_date = datetime.now().date()
@@ -656,7 +662,7 @@ all_chats_df = process_team_folders(main_directory_path, report_date)
 
 
 # Save to a CSV file
-csv_file_path = 'C:\ChatAnalysisProject/chat_data14.csv'  # Define your desired path and file name
+csv_file_path = 'C:\\Users\\ayush\\Documents\\Chat-Analyzer-V2/chat_data1.csv'  # Define your desired path and file name
 all_chats_df.to_csv(csv_file_path, index=False)
 #print(f"DataFrame saved as CSV at {csv_file_path}")
 # Display the result
