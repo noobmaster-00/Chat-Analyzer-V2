@@ -118,7 +118,11 @@ def extract_group_name(file_path):
     group_name = re.sub(r'\(\d+\)$', '', group_name)  # Remove any numbers in parentheses at the end
     return group_name  # Removed the extra "_person" suffix
 
+<<<<<<< Updated upstream:Table Codes/table3_delay_analysis.py
 date_directory = "C:\\Users\\maurice\\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\drive-download-20231205T080950Z-001"
+=======
+date_directory = "C:\\ChatAnalysisProject"
+>>>>>>> Stashed changes:Table Codes/delay_analysis.py
 chat_files = list_chat_files(date_directory)
 dataframes = {}
 
@@ -151,7 +155,11 @@ example_key = next(iter(dataframes))  # Just for demonstration
 logging.debug(f"Example dataframe for key {example_key}: \n{dataframes[example_key]}")
 
 
+<<<<<<< Updated upstream:Table Codes/table3_delay_analysis.py
 csv_save_directory = "C:\\Users\\maurice\\Documents\\Chat-Analyzer-V2\\Chat CSVs"
+=======
+csv_save_directory = "C:\\ChatAnalysisProject\\Chat CSVs"
+>>>>>>> Stashed changes:Table Codes/delay_analysis.py
 os.makedirs(csv_save_directory, exist_ok=True)
 
 # Saving each DataFrame as a CSV
