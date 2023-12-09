@@ -343,7 +343,7 @@ def missed_replies_employee_after_working_hrs(chat_df, employee_name, target_dat
         work_start_time = datetime(target_date.year, target_date.month, target_date.day, 7, 30, 0)
         work_end_time = datetime(target_date.year, target_date.month, target_date.day, 16, 30, 0)
     
-    if team_folder == 'KAM':
+    elif team_folder == 'KAM':
        # KAM Team working hours: 7:30 AM to 4:00 PM
         work_start_time = datetime(target_date.year, target_date.month, target_date.day, 11, 30, 0)
         work_end_time = datetime(target_date.year, target_date.month, target_date.day, 21, 30, 0)
