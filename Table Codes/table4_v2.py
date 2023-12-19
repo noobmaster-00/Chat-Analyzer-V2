@@ -6,44 +6,125 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-# Function to list all chat files in the directory structure and associate them with senders
+# Function to list all chat files in the directory structure
 def list_chat_files(date_directory):
-    chat_files = {}
+    chat_files = []
     for date_folder in os.listdir(date_directory):
         date_path = os.path.join(date_directory, date_folder)
         if os.path.isdir(date_path):
-            for person_folder in os.listdir(date_path):
-                person_path = os.path.join(date_path, person_folder)
-                if os.path.isdir(person_path):
-                    chat_files[person_folder] = []
-                    for file in os.listdir(person_path):
-                        if file.endswith('.txt'):
-                            chat_files[person_folder].append(os.path.join(person_path, file))
+            for team_folder in os.listdir(date_path):
+                team_path = os.path.join(date_path, team_folder)
+                if os.path.isdir(team_path):
+                    for person_folder in os.listdir(team_path):
+                        person_path = os.path.join(team_path, person_folder)
+                        if os.path.isdir(person_path):
+                            for file in os.listdir(person_path):
+                                if file.endswith('.txt'):
+                                    chat_files.append(os.path.join(person_path, file))
     return chat_files
 
-# Function to parse a chat file
-def parse_chat_file(file_path, sender_name):
+def parse_chat_file(file_path, expected_date_minus_one, person_name):
     chat_data = []
+    last_non_person_time = None  # Tracks the time of the last non-person message
+
     with open(file_path, 'r', encoding='utf-8') as file:
         for line in file:
-            message_match = re.match(r'(\\d{2}/\\d{2}/\\d{2}, \\d{1,2}:\\d{2}\u202f[ap]m) - (.*?): (.*)', line)
+            message_match = re.match(r'(\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2} [ap]m) - (.*?): (.*)', line)
+            system_match = re.match(r'(\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2} [ap]m) - (.*)', line)
+            
             if message_match:
-                date_time_str, sender, message = message_match.groups()
-                date_time = pd.to_datetime(date_time_str, format='%d/%m/%y, %I:%M\u202f%p')
-                message_type = 'person' if sender == sender_name else 'other'
-                chat_data.append((date_time, sender, message_type, message))
+                date_time_str, _, message = message_match.groups()
+                sender = person_name  # Use person_name as sender
+            elif system_match:
+                date_time_str, info = system_match.groups()
+                sender = None
+            else:
+                continue
+
+            date_time = pd.to_datetime(date_time_str, format='%d/%m/%y, %I:%M %p')
+
+            if date_time.date() != expected_date_minus_one:
+                continue
+
+            message_type = 'person' if sender == person_name else 'other'
+
+            # Calculate delay
+            delay = False
+            if message_type == 'person' and last_non_person_time:
+                diff = date_time - last_non_person_time
+                delay = diff.total_seconds() > 900  # 15 minutes in seconds
+
+            chat_data.append((date_time, sender, message_type, delay))
+
+            if message_type == 'other':
+                last_non_person_time = date_time
+
     return chat_data
 
-# Function to process chats for each person
+
+def create_template_dataframe():
+    times = [datetime.datetime(2000, 1, 1, 0, 0) + datetime.timedelta(minutes=1 * i) for i in range(1440)]
+    intervals = [time.strftime('%I:%M %p') for time in times]
+    df = pd.DataFrame(index=intervals)
+    return df
+
+def populate_dataframe(df, parsed_data, start_column_index):
+    new_columns = {}
+
+    for entry in parsed_data:
+        date_time, sender, message_type, delay = entry
+        interval_index = min((date_time.hour * 60 + date_time.minute) // 1, 1439)
+        interval = df.index[interval_index]
+
+        if start_column_index not in new_columns:
+            new_columns[start_column_index] = pd.Series(0, index=df.index)  # For 'person'
+        if start_column_index + 1 not in new_columns:
+            new_columns[start_column_index + 1] = pd.Series(0, index=df.index)  # For 'other'
+        if start_column_index + 2 not in new_columns:
+            new_columns[start_column_index + 2] = pd.Series(False, index=df.index)  # For delay column
+
+        if message_type == 'person':
+            new_columns[start_column_index].at[interval] = 1
+        elif message_type == 'other':
+            new_columns[start_column_index + 1].at[interval] = 1
+
+        new_columns[start_column_index + 2].at[interval] = delay  # Set delay flag
+
+    df = pd.concat([df, pd.DataFrame(new_columns)], axis=1)
+
+    return df, start_column_index + 3
+
+
 def process_person_chats(chat_files):
-    person_dataframes = {}
-    for person_name, files in chat_files.items():
-        person_chat = []
-        for file_path in files:
-            person_chat.extend(parse_chat_file(file_path, person_name))
-        df = pd.DataFrame(person_chat, columns=['DateTime', 'Sender', 'MessageType', 'Message'])
-        person_dataframes[person_name] = df
-    return person_dataframes
+    dataframes = {}
+    for file in chat_files:
+        parts = file.split(os.sep)
+        date_folder, person_name = parts[-4], parts[-2]  # Extracting the person's name
+
+        try:
+            folder_date = pd.to_datetime(date_folder, format='%Y-%m-%d').date()
+        except ValueError:
+            continue
+
+        expected_date_minus_one = folder_date - datetime.timedelta(days=1)
+        key = f"{folder_date.strftime('%Y-%m-%d')}_{person_name}"
+
+        if key not in dataframes:
+            dataframes[key] = create_template_dataframe()
+            start_column_index = 0
+        else:
+            if not dataframes[key].columns.empty:
+                start_column_index = max(dataframes[key].columns) + 1
+            else:
+                start_column_index = 0
+
+        parsed_data = parse_chat_file(file, expected_date_minus_one, person_name)
+        dataframes[key], start_column_index = populate_dataframe(dataframes[key], parsed_data, start_column_index)
+
+    return dataframes
+
+
+
 
 def create_graphs(df, person_identifier, base_directory):
     graph_directory = os.path.join(base_directory, "Graphs")
@@ -114,8 +195,9 @@ def create_graphs(df, person_identifier, base_directory):
 
     plt.close(fig)
 
+
 # Main script
-date_directory = "F:\\Github-mauriceyeng\\Chat-Analyzer-V2\\Chat Folder from Drive\\drive-download-20231216T050435Z-001"
+date_directory = "F:\\Github-mauriceyeng\\Chat-Analyzer-V2\\Chat Folder from Drive\\New folder"
 chat_files = list_chat_files(date_directory)
 person_dataframes = process_person_chats(chat_files)
 
