@@ -23,7 +23,7 @@ def list_chat_files(date_directory):
                                     chat_files.append(os.path.join(person_path, file))
     return chat_files
 
-def parse_chat_file(file_path, expected_date_minus_one):
+def parse_chat_file(file_path, expected_date_minus_one, person_name):
     chat_data = []
     last_non_person_time = None  # Tracks the time of the last non-person message
 
@@ -44,7 +44,7 @@ def parse_chat_file(file_path, expected_date_minus_one):
             if date_time.date() != expected_date_minus_one:
                 continue
 
-            if sender is not None and re.match(r'^[+\d\s-]+$', sender) is None:
+            if sender is not None and sender == person_name:
                 message_type = 'person'
             else:
                 message_type = 'other'
@@ -61,6 +61,7 @@ def parse_chat_file(file_path, expected_date_minus_one):
                 last_non_person_time = date_time
 
     return chat_data
+
 
 def create_template_dataframe():
     times = [datetime.datetime(2000, 1, 1, 0, 0) + datetime.timedelta(minutes=1 * i) for i in range(1440)]
@@ -116,10 +117,11 @@ def process_person_chats(chat_files):
             else:
                 start_column_index = 0
 
-        parsed_data = parse_chat_file(file, expected_date_minus_one)
+        parsed_data = parse_chat_file(file, expected_date_minus_one, person)
         dataframes[key], start_column_index = populate_dataframe(dataframes[key], parsed_data, start_column_index)
 
     return dataframes
+
 
 def create_graphs(df, person_identifier, base_directory):
     graph_directory = os.path.join(base_directory, "Graphs")
@@ -192,7 +194,7 @@ def create_graphs(df, person_identifier, base_directory):
 
 
 # Main script
-date_directory = "C:\\Users\\ayush\\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\New folder"
+date_directory = "F:\\Github-mauriceyeng\\Chat-Analyzer-V2\\Chat Folder from Drive\\drive-download-20231220T041459Z-001"
 chat_files = list_chat_files(date_directory)
 person_dataframes = process_person_chats(chat_files)
 
