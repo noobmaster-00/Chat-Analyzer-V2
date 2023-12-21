@@ -193,7 +193,7 @@ def create_graphs(df, person_identifier, base_directory):
 
 
 # Main script
-date_directory = "F:\\Github-mauriceyeng\\Chat-Analyzer-V2\\Chat Folder from Drive\\drive-download-20231220T044137Z-001"
+date_directory = "C:\\Users\\ayush\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\New folder"
 chat_files = list_chat_files(date_directory)
 person_dataframes = process_person_chats(chat_files)
 

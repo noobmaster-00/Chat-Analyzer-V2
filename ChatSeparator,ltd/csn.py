@@ -72,7 +72,7 @@ def main():
     try:
         settings = read_settings()
         name_list = set(settings.get('name_list', []))
-        chat_file_path = settings.get('chat_file_path', 'C:\\whatsapp_chat_analyzer\\')
+        chat_file_path = settings.get('chat_file_path', 'C:\\Users\\ayush\\Documents\\Chat-Analyzer-V2\\ChatSeparatorltd\\')
 
         shared_chats_folder = 'shared_chats'
         if not os.path.exists(shared_chats_folder):
@@ -129,5 +129,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
