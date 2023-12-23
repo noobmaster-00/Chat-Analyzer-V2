@@ -31,10 +31,8 @@ def parse_chat_file(file_path, expected_date_minus_one, person_name):
         for line in file:
             message_match = re.match(r'(\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2} [ap]m) - (.*?): (.*)', line)
             system_match = re.match(r'(\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2} [ap]m) - (.*)', line)
-            
             if message_match:
-                date_time_str, _, message = message_match.groups()
-                sender = person_name  # Use person_name as sender
+                date_time_str, sender, message = message_match.groups()
             elif system_match:
                 date_time_str, info = system_match.groups()
                 sender = None
@@ -46,7 +44,10 @@ def parse_chat_file(file_path, expected_date_minus_one, person_name):
             if date_time.date() != expected_date_minus_one:
                 continue
 
-            message_type = 'person' if sender == person_name else 'other'
+            if sender is not None and sender == person_name:
+                message_type = 'person'
+            else:
+                message_type = 'other'
 
             # Calculate delay
             delay = False
@@ -91,15 +92,13 @@ def populate_dataframe(df, parsed_data, start_column_index):
         new_columns[start_column_index + 2].at[interval] = delay  # Set delay flag
 
     df = pd.concat([df, pd.DataFrame(new_columns)], axis=1)
-
     return df, start_column_index + 3
-
 
 def process_person_chats(chat_files):
     dataframes = {}
     for file in chat_files:
         parts = file.split(os.sep)
-        date_folder, person_name = parts[-4], parts[-2]  # Extracting the person's name
+        date_folder, person = parts[-4], parts[-2]
 
         try:
             folder_date = pd.to_datetime(date_folder, format='%Y-%m-%d').date()
@@ -107,7 +106,7 @@ def process_person_chats(chat_files):
             continue
 
         expected_date_minus_one = folder_date - datetime.timedelta(days=1)
-        key = f"{folder_date.strftime('%Y-%m-%d')}_{person_name}"
+        key = f"{folder_date.strftime('%Y-%m-%d')}_{person}"
 
         if key not in dataframes:
             dataframes[key] = create_template_dataframe()
@@ -118,15 +117,19 @@ def process_person_chats(chat_files):
             else:
                 start_column_index = 0
 
-        parsed_data = parse_chat_file(file, expected_date_minus_one, person_name)
+        parsed_data = parse_chat_file(file, expected_date_minus_one, person)
         dataframes[key], start_column_index = populate_dataframe(dataframes[key], parsed_data, start_column_index)
 
     return dataframes
 
 
-
-
 def create_graphs(df, person_identifier, base_directory):
+    # Splitting person_identifier to adjust the date
+    folder_date_str, person_name = person_identifier.split('_')
+    folder_date = pd.to_datetime(folder_date_str).date() - datetime.timedelta(days=1)
+    adjusted_date_str = folder_date.strftime('%Y-%m-%d')
+    adjusted_person_identifier = f"{adjusted_date_str}_{person_name}"
+
     graph_directory = os.path.join(base_directory, "Graphs")
     os.makedirs(graph_directory, exist_ok=True)
 
@@ -149,55 +152,48 @@ def create_graphs(df, person_identifier, base_directory):
     ax.tick_params(axis='x', colors='black')
     ax.tick_params(axis='y', colors='black')
 
-
     # Plot the bar for 'person' messages
     ax.bar(df.index, person_chat_activity, color='lime', width=2, label='Counselor')
 
-    # Plot the bar for 'other' messages, stacked on top of 'person' messages
-    #ax.bar(df.index, other_chat_activity, color='darkgreen', width=1, label='Other Messages', bottom=person_chat_activity)
+    # Plot for 'other' messages
     ax.plot(df.index, other_chat_activity, color='darkgreen', linestyle=':', label='Student')
-    # Draw white lines for the axes
-    ax.axhline(0, color='black', linewidth=3)  # Changed color to black
+
+    # Draw lines for the axes
+    ax.axhline(0, color='black', linewidth=3)
     ax.axvline(first_chat_time, color='white', linewidth=3)
-    #ax.axvline(df.index[0], color='black', linewidth=3)  # Changed color to black
 
-
-    # Rotate x-axis labels to prevent overlap and increase label font sizes
+    # Rotate x-axis labels and increase label font sizes
     plt.xticks(rotation=90, fontsize=12)
-
-    # Set y-axis to show every integer tick
     plt.yticks(np.arange(0, 11, 1), fontsize=12)
 
-    # Set x-axis to show the range from the first chat to the last chat
+    # Set x-axis and y-axis limits and locators
     ax.set_xlim(first_chat_time, last_chat_time)
-    #ax.set_xlim(df.index[0], df.index[-1])
-    ax.xaxis.set_major_locator(ticker.MaxNLocator(96))  # Set locator for 15-minute intervals
-
-    # Set y-axis dynamic range based on the maximum chat activity with a buffer
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(96))
     max_activity = max(person_chat_activity.max(), other_chat_activity.max())
     ax.set_ylim(0, 11)
 
-    # Increasing font size for labels and title
+    # Setting labels and title
     ax.set_xlabel('Time', fontsize=12)
     ax.set_ylabel('Number of Chats', fontsize=12)
-    ax.set_title(f'Chat Activity for {person_identifier}', fontsize=14)
+    ax.set_title(f'Chat Activity for {adjusted_person_identifier}', fontsize=14)
 
-    # Create and set the legend
+    # Setting the legend
     legend = ax.legend(facecolor='lightgray', edgecolor='black', fontsize=12, fancybox=True)
     for text in legend.get_texts():
         text.set_color('black')
         text.set_weight('bold')
 
     # Saving the graph
-    graph_file_name = f"{person_identifier}.png"
+    graph_file_name = f"{adjusted_person_identifier}.png"
     plt.savefig(os.path.join(graph_directory, graph_file_name), format='png', dpi=300, bbox_inches='tight')
     print(f"Graph saved as {graph_file_name}")
 
     plt.close(fig)
 
 
+
 # Main script
-date_directory = "F:\\Github-mauriceyeng\\Chat-Analyzer-V2\\Chat Folder from Drive\\New folder"
+date_directory = "C:\\Users\\ayush\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\New folder"
 chat_files = list_chat_files(date_directory)
 person_dataframes = process_person_chats(chat_files)
 
