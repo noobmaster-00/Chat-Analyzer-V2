@@ -25,42 +25,56 @@ def list_chat_files(date_directory):
 
 def parse_chat_file(file_path, expected_date_minus_one, person_name):
     chat_data = []
-    last_non_person_time = None  # Tracks the time of the last non-person message
+    last_non_person_time = None
+    date_pattern = re.compile(r'^\d{1,2}/\d{1,2}/\d{2}, \d{1,2}:\d{2}\s?[APMapm]{2} - ')
 
     with open(file_path, 'r', encoding='utf-8') as file:
-        for line in file:
-            message_match = re.match(r'(\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2} [ap]m) - (.*?): (.*)', line)
-            system_match = re.match(r'(\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2} [ap]m) - (.*)', line)
-            if message_match:
-                date_time_str, sender, message = message_match.groups()
-            elif system_match:
-                date_time_str, info = system_match.groups()
-                sender = None
-            else:
-                continue
+        lines = file.readlines()
 
-            date_time = pd.to_datetime(date_time_str, format='%d/%m/%y, %I:%M %p')
+    current_message = ""
 
-            if date_time.date() != expected_date_minus_one:
-                continue
-
-            if sender is not None and sender == person_name:
-                message_type = 'person'
-            else:
-                message_type = 'other'
-
-            # Calculate delay
-            delay = False
-            if message_type == 'person' and last_non_person_time:
-                diff = date_time - last_non_person_time
-                delay = diff.total_seconds() > 900  # 15 minutes in seconds
-
-            chat_data.append((date_time, sender, message_type, delay))
-
-            if message_type == 'other':
-                last_non_person_time = date_time
+    for line in lines:
+        if date_pattern.match(line):
+            if current_message:
+                chat_data.extend(process_line(current_message, expected_date_minus_one, person_name, last_non_person_time))
+                last_non_person_time = update_last_non_person_time(chat_data, last_non_person_time)
+            current_message = line.rstrip()
+        else:
+            if current_message:
+                current_message += " " + line.strip()
+    if current_message:
+        chat_data.extend(process_line(current_message, expected_date_minus_one, person_name, last_non_person_time))
 
     return chat_data
+
+def process_line(line, expected_date_minus_one, person_name, last_non_person_time):
+    message_match = re.match(r'(\d{1,2}/\d{1,2}/\d{2}, \d{1,2}:\d{2}\s?[APMapm]{2}) - (.*?): (.*)', line)
+    if message_match:
+        date_time_str, sender, message = message_match.groups()
+        try:
+            date_time = pd.to_datetime(date_time_str, format='%d/%m/%y, %I:%M %p', errors='coerce')
+        except ValueError:
+            return []
+
+        if date_time is pd.NaT or date_time.date() != expected_date_minus_one:
+            return []
+
+        message_type = 'person' if sender == person_name else 'other'
+        delay = calculate_delay(date_time, last_non_person_time, message_type)
+        return [(date_time, sender, message_type, delay)]
+    else:
+        return []
+
+def update_last_non_person_time(chat_data, last_non_person_time):
+    if chat_data and chat_data[-1][2] == 'other':
+        return chat_data[-1][0]
+    return last_non_person_time
+
+def calculate_delay(current_time, last_non_person_time, message_type):
+    if message_type == 'person' and last_non_person_time:
+        diff = current_time - last_non_person_time
+        return diff.total_seconds() > 900  # 15 minutes in seconds
+    return False
 
 
 def create_template_dataframe():
@@ -193,7 +207,7 @@ def create_graphs(df, person_identifier, base_directory):
 
 
 # Main script
-date_directory = "C:\\Users\\ayush\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\New folder"
+date_directory = "D:\\Github\\Chat-Analyzer-V2\\Chat Folder from Drive\\2024-01-03-20240103T025503Z-001"
 chat_files = list_chat_files(date_directory)
 person_dataframes = process_person_chats(chat_files)
 
