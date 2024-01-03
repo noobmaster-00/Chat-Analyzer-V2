@@ -12,9 +12,10 @@ processed_chats = set()
 
 # Function to process a single line of chat
 def process_line(line):
-    pattern = r'(\d{2}/\d{2}/\d{2}), (\d{1,2}:\d{2}\s?[APMapm]{2}) - (.*?): (.*)'
+    pattern = r'(\d{1,2}/\d{1,2}/\d{2}), (\d{1,2}:\d{2}\s?[AaPp][Mm]) - (.*?): (.*)'
     match = re.match(pattern, line)
     if match:
+        logging.debug(f"match file")
         date_str, time_str, sender, message = match.groups()
         date = datetime.strptime(date_str, '%d/%m/%y')
         time = datetime.strptime(time_str, '%I:%M %p').strftime('%H:%M')
@@ -23,7 +24,7 @@ def process_line(line):
         return None
 
 def process_line_for_delay(line):
-    pattern = r'(\d{2}/\d{2}/\d{2}), (\d{1,2}:\d{2}\s?[APMapm]{2}) - (.*?): (.*)'
+    pattern = r'(\d{1,2}/\d{1,2}/\d{2}), (\d{1,2}:\d{2}\s?[AaPp][Mm]) - (.*?): (.*)'
     match = re.match(pattern, line)
     if match:
         date_str, time_str, sender, message = match.groups()
@@ -40,7 +41,7 @@ def read_chat_file_for_delay(file_path):
 
     concatenated_lines = []
     current_message = ""
-    date_pattern = re.compile(r'^\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2}\s?[APMapm]{2} - ')
+    date_pattern = re.compile(r'^\d{1,2}/\d{1,2}/\d{2}, \d{1,2}:\d{2}\s?[AaPp][Mm] - ')
 
     for line in lines:
         if date_pattern.match(line):
@@ -385,7 +386,7 @@ def read_chat_file(file_path):
 
     concatenated_lines = []
     current_message = ""
-    date_pattern = re.compile(r'^\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2}\s?[APMapm]{2} - ')
+    date_pattern = re.compile(r'^\d{1,2}/\d{1,2}/\d{2}, \d{1,2}:\d{2}\s?[AaPp][Mm] - ')
 
     for line in lines:
         if date_pattern.match(line):
@@ -621,7 +622,7 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
 # Main directory path construction and report date setting
 # Main directory path construction and report date setting
 local_date_format = '%Y-%m-%d'  # Adjust this to your local date format
-main_directory = 'C:\\Users\\ayush\\Documents\\Chat-Analyzer-V2\\Chat Folder from Drive\\New folder'  # Replace with your base directory path
+main_directory = 'C:\\Users\\aditya\\OneDrive\\Documents\\Chat-Analyzer-V2'  # Replace with your base directory path
 
 # Get today's date
 today_date = datetime.now().date()
@@ -662,7 +663,8 @@ all_chats_df = process_team_folders(main_directory_path, report_date)
 
 
 # Save to a CSV file
-csv_file_path = 'C:\\Users\\ayush\\Documents\\Chat-Analyzer-V2/chat_data6.csv'  # Define your desired path and file name
+csv_file_path = 'C:\\Users\\aditya\\OneDrive\\Documents\\Chat-Analyzer-V2/chat_data7.csv'  # Define your desired path and file name
+
 all_chats_df.to_csv(csv_file_path, index=False)
 #print(f"DataFrame saved as CSV at {csv_file_path}")
 # Display the result
