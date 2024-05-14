@@ -215,7 +215,11 @@ def calculate_time_spent(chat_df, target_date, employee_name, team_folder):
         total_chars = len(message)
 
         if team_folder == "KAM" and total_chars > 700:
-            time_spent_seconds = 5  # Cap at 5 seconds for long messages in KAM team folder
+            time_spent_seconds = 10  # Cap at 5 seconds for long messages in KAM team folder
+
+        if team_folder == "SALES" and total_chars > 400:
+            time_spent_seconds = 10    
+            
         else:
             time_spent_seconds = total_chars * 0.2  # Assuming 0.2 seconds per character
 
@@ -230,6 +234,22 @@ def calculate_time_spent(chat_df, target_date, employee_name, team_folder):
     formatted_time_spent = strfdelta(time_spent_timedelta)
 
     return formatted_time_spent
+
+def count_of_message_employee(chat_df, target_date, employee_name, team_folder):
+    daily_messages = chat_df[(chat_df['date'].dt.date == target_date) & (chat_df['sender'] == employee_name)]
+
+    if daily_messages.empty:
+        return 0  # Return 0 if no messages found
+
+    return len(daily_messages)  # Return the count of messages
+
+def count_of_message_student(chat_df, target_date, employee_name, team_folder):
+    daily_messages = chat_df[(chat_df['date'].dt.date == target_date) & (chat_df['sender'] != employee_name)]
+
+    if daily_messages.empty:
+        return 0  # Return 0 if no messages found
+
+    return len(daily_messages)  # Return the count of messages
 
 def strfdelta(tdelta):
     hours, remainder = divmod(tdelta.seconds, 3600)
@@ -485,6 +505,10 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
     # Calculate the time spent on Day 0 (report_date - 1 day)
     day_0_date = report_date - timedelta(days=1)
     day_0_time_spent = calculate_time_spent(chat_df, day_0_date, employee_folder,team_folder)
+    count_of_message_by_student = count_of_message_student(chat_df, day_0_date, employee_folder,team_folder)
+    count_of_message_by_employee = count_of_message_employee(chat_df, day_0_date, employee_folder,team_folder)
+    logging.debug(f"day indicator employee: {count_of_message_by_student}")
+
     #day_0_time_spent = timedelta(hours=int(day_0_time_spent.split(':')[0]), minutes=int(day_0_time_spent.split(':')[1]), seconds=int(day_0_time_spent.split(':')[2]))
     # Calculate the lead response based on text length difference for Day 0
     lead_response_day_0 = calculate_lead_response(chat_df, employee_folder, day_0_date)
@@ -615,6 +639,8 @@ def process_chat_file(file_path, report_date, main_directory, team_folder, emplo
         'Messages for Reference': messages_for_reference,
         'Actual Missed Reply from Employee': Actual_missed_Reply,
         'Actual Broken Chat from Employee' : Actual_broken_chat,
+        'Count_of_message_send_by_student' : count_of_message_by_student,
+        'Count_of_message_send_by_employee' : count_of_message_by_employee,
     }
     #logging.debug(f"Row created for chat: {row}")
     return row
@@ -629,7 +655,7 @@ today_date = datetime.now().date()
 
 # Check the day of the week
 if today_date.weekday() in range(1, 6):  # Tuesday to Saturday
-    report_date = today_date
+    report_date = today_date - timedelta(days=0)    
 else:  # Monday
     # You can adjust the number of days to subtract based on your specific requirements
     report_date = today_date - timedelta(days=1)
@@ -663,9 +689,11 @@ all_chats_df = process_team_folders(main_directory_path, report_date)
 
 
 # Save to a CSV file
-csv_file_path = 'C:\\Users\\aditya\\OneDrive\\Documents\\Chat-Analyzer-V2/chat_data7.csv'  # Define your desired path and file name
+csv_file_path = 'C:\\Users\\aditya\\OneDrive\\Documents\\Chat-Analyzer-V2/chat_data10.csv'  # Define your desired path and file name
 
 all_chats_df.to_csv(csv_file_path, index=False)
 #print(f"DataFrame saved as CSV at {csv_file_path}")
 # Display the result
 #print(all_chats_df)
+
+
